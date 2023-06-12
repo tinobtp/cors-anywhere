@@ -1,7 +1,8 @@
+var fs = require('fs');
 // Listen on a specific host via the HOST environment variable
 var host = process.env.HOST || '0.0.0.0';
 // Listen on a specific port via the PORT environment variable
-var port = process.env.PORT || 8080;
+var port = process.env.PORT || 8443;
 
 // Grab the blacklist from the command-line so that we can update the blacklist without deploying
 // again. CORS Anywhere is open by design, and this blacklist is not used, except for countering
@@ -16,13 +17,21 @@ function parseEnvList(env) {
   return env.split(',');
 }
 
+// BAO: set origin whitelist
+var targetWhitelist = ['https://app.chuckwalla.com'];
+
 // Set up rate-limiting to avoid abuse of the public CORS Anywhere server.
 var checkRateLimit = require('./lib/rate-limit')(process.env.CORSANYWHERE_RATELIMIT);
 
 var cors_proxy = require('./lib/cors-anywhere');
 cors_proxy.createServer({
+  httpsOptions: {
+        key: fs.readFileSync('/etc/letsencrypt/live/connectwithbao.io/privkey.pem'),
+        cert: fs.readFileSync('/etc/letsencrypt/live/connectwithbao.io/fullchain.pem')
+  },
   originBlacklist: originBlacklist,
   originWhitelist: originWhitelist,
+  targetWhitelist: targetWhitelist,
   requireHeader: ['origin', 'x-requested-with'],
   checkRateLimit: checkRateLimit,
   removeHeaders: [
